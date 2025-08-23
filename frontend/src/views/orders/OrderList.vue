@@ -75,7 +75,7 @@
             <el-icon><Search /></el-icon>
             查询
           </el-button>
-          <el-button @click="handleReset">
+          <el-button type="primary" @click="handleReset">
             <el-icon><Refresh /></el-icon>
             重置
           </el-button>
@@ -93,7 +93,7 @@
         <el-icon><Upload /></el-icon>
         批量填报 ({{ selectedOrders.length }})
       </el-button>
-      <el-button @click="handleExport" :loading="exportLoading">
+      <el-button type="primary" :disabled="selectedOrders.length === 0" @click="handleExport" :loading="exportLoading">
         <el-icon><Download /></el-icon>
         导出数据
       </el-button>
@@ -107,7 +107,6 @@
         :data="tableData"
         @selection-change="handleSelectionChange"
         row-key="id"
-        stripe
         style="width: 100%"
       >
         <el-table-column type="selection" width="55" reserve-selection />
@@ -159,7 +158,7 @@
 
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="viewOrderDetail(row)">
+            <el-button type="primary" link size="middle" @click="viewOrderDetail(row)">
               查看详情
             </el-button>
           </template>
@@ -253,13 +252,23 @@ export default {
       total: 0
     })
 
-    const tableData = computed(() => store.getters.allOrders)
+    // 修改：添加分页数据计算
+    const tableData = computed(() => {
+      const allOrders = store.getters.allOrders
+      const start = (pagination.currentPage - 1) * pagination.pageSize
+      const end = start + pagination.pageSize
+      return allOrders.slice(start, end)
+    })
 
     // 获取订单数据
     const fetchOrders = async () => {
       loading.value = true
       try {
-        const params = { ...searchForm }
+        const params = {
+          ...searchForm,
+          currentPage: pagination.currentPage,
+          pageSize: pagination.pageSize
+        }
         if (params.dateRange) {
           params.startDate = params.dateRange[0]
           params.endDate = params.dateRange[1]
@@ -267,7 +276,7 @@ export default {
         }
 
         await store.dispatch('fetchOrders', params)
-        pagination.total = tableData.value.length
+        pagination.total = store.getters.allOrders.length
       } catch (error) {
         ElMessage.error('获取数据失败')
       } finally {
@@ -349,12 +358,13 @@ export default {
     // 分页
     const handleSizeChange = (val) => {
       pagination.pageSize = val
+      pagination.currentPage = 1 // 重置到第一页
       fetchOrders()
     }
 
     const handleCurrentChange = (val) => {
       pagination.currentPage = val
-      fetchOrders()
+      // 前端分页不需要重新请求数据，数据已经通过computed自动更新
     }
 
     // 格式化函数
@@ -457,4 +467,3 @@ export default {
   }
 }
 </style>
-

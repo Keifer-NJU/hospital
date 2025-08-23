@@ -125,7 +125,6 @@
       <el-table
         v-loading="tableLoading"
         :data="filteredTableData"
-        stripe
         style="width: 100%"
         max-height="600"
       >

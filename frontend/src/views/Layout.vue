@@ -4,14 +4,13 @@
       <!-- 侧边栏 -->
       <el-aside width="240px" class="sidebar">
         <div class="logo">
-          <h2>采购订单管理</h2>
+          <h2>采购订单智能上报系统</h2>
         </div>
         <el-menu
           :default-active="$route.path"
           router
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#1677ff"
+          text-color="#000000"
+          active-text-color="#1890ff"
           unique-opened
         >
           <el-sub-menu index="/dashboard/purchase">
@@ -142,8 +141,8 @@ export default {
 }
 
 .sidebar {
-  background-color:#304156;
-  box-shadow: 2px 0 6px rgba(0, 21, 41, 0.35);
+  background-color: #fff;
+  box-shadow: 1px 0 6px rgba(0, 21, 41, 0.35);
   z-index: 1001;
 }
 
@@ -152,15 +151,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #2b3a4b;
-  border-bottom: 1px solid #1f2d3d;
 }
 
 .logo h2 {
-  color: #fff;
-  font-size: 16px;
+  color: #1677ff;
+  font-size: 20px;
   font-weight: 600;
-  margin: 0;
+  margin: 2;
 }
 
 .header {
@@ -208,7 +205,7 @@ export default {
 }
 
 .main-content {
-  background-color: #f0f2f5;
+  background-color: #f3f7fc !important;
   padding: 24px;
   min-height: calc(100vh - 60px);
 }
@@ -217,15 +214,82 @@ export default {
   height: 50px;
   line-height: 50px;
   border-radius: 0;
+  color: #000000 !important;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+:deep(.el-menu-item .el-icon) {
+  color: #000000 !important;
+  margin-right: 8px;
 }
 
 :deep(.el-menu-item.is-active) {
-  background-color: #263445 !important;
-  border-right: 3px solid #409eff;
+  background-color: #e6f3ff !important;
+  border-right: 3px solid #1890ff;
+  color: #1890ff !important;
+  font-weight: 600;
+}
+
+:deep(.el-menu-item.is-active .el-icon) {
+  color: #1890ff !important;
 }
 
 :deep(.el-menu-item:hover) {
-  background-color: #263445 !important;
+  background-color: #f5f7fa !important;
+  color: #1890ff !important;
+}
+
+:deep(.el-menu-item:hover .el-icon) {
+  color: #1890ff !important;
+}
+
+:deep(.el-sub-menu__title) {
+  height: 50px;
+  line-height: 50px;
+  color: #000000 !important;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+:deep(.el-sub-menu__title .el-icon) {
+  color: #000000 !important;
+  margin-right: 8px;
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background-color: #f5f7fa !important;
+  color: #1890ff !important;
+}
+
+:deep(.el-sub-menu__title:hover .el-icon) {
+  color: #1890ff !important;
+}
+
+:deep(.el-sub-menu .el-menu-item) {
+  background-color: #fafafa !important;
+  color: #000000 !important;
+  font-weight: 400;
+  padding-left: 60px !important;
+}
+
+:deep(.el-sub-menu .el-menu-item .el-icon) {
+  color: #000000 !important;
+}
+
+:deep(.el-sub-menu .el-menu-item.is-active) {
+  background-color: #e6f3ff !important;
+  color: #1890ff !important;
+  font-weight: 600;
+}
+
+:deep(.el-sub-menu .el-menu-item.is-active .el-icon) {
+  color: #1890ff !important;
+}
+
+:deep(.el-sub-menu .el-menu-item:hover) {
+  background-color: #f0f0f0 !important;
+  color: #1890ff !important;
 }
 
 @media (max-width: 768px) {

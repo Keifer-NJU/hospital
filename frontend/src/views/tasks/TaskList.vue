@@ -64,7 +64,6 @@
       <el-table
         v-loading="loading"
         :data="filteredTaskList"
-        stripe
         style="width: 100%"
         @row-click="viewTaskDetail"
         row-class-name="clickable-row"
