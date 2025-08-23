@@ -6,80 +6,89 @@
         ref="searchFormRef"
         :model="searchForm"
         :inline="true"
-        label-width="100px"
+        label-width="80px"
       >
-        <el-form-item label="入库单号">
-          <el-input
-            v-model="searchForm.orderNo"
-            placeholder="请输入入库单号"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-form-item label="入库单号">
+              <el-input
+                v-model="searchForm.orderNo"
+                placeholder="请输入入库单号"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="物资名称">
+              <el-input
+                v-model="searchForm.materialName"
+                placeholder="请输入物资名称"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="规格型号">
+              <el-input
+                v-model="searchForm.specification"
+                placeholder="请输入规格型号"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="品牌">
+              <el-input
+                v-model="searchForm.brand"
+                placeholder="请输入品牌"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-        <el-form-item label="物资名称">
-          <el-input
-            v-model="searchForm.materialName"
-            placeholder="请输入物资名称"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="规格型号">
-          <el-input
-            v-model="searchForm.specification"
-            placeholder="请输入规格型号"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="品牌">
-          <el-input
-            v-model="searchForm.brand"
-            placeholder="请输入品牌"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
-
-        <el-form-item label="审核状态">
-          <el-select
-            v-model="searchForm.auditStatus"
-            placeholder="请选择审核状态"
-            clearable
-            style="width: 150px"
-          >
-            <el-option label="待审核" value="PENDING" />
-            <el-option label="已审核" value="APPROVED" />
-            <el-option label="已驳回" value="REJECTED" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="时间范围">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            style="width: 240px"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch" :loading="loading">
-            <el-icon><Search /></el-icon>
-            查询
-          </el-button>
-          <el-button type="primary" @click="handleReset">
-            <el-icon><Refresh /></el-icon>
-            重置
-          </el-button>
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="6">
+            <el-form-item label="审核状态" style="width: 89%">
+              <el-select
+                v-model="searchForm.auditStatus"
+                placeholder="请选择审核状态"
+                clearable
+                popper-class="audit-status-dropdown"
+              >
+                <el-option label="待审核" value="PENDING" />
+                <el-option label="已审核" value="APPROVED" />
+                <el-option label="已驳回" value="REJECTED" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="9">
+            <el-form-item label="时间范围">
+              <el-date-picker
+                v-model="searchForm.dateRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="9" class="search-buttons">
+            <el-form-item>
+              <el-button type="primary" @click="handleSearch" :loading="loading">
+                <el-icon><Search /></el-icon>
+                查询
+              </el-button>
+              <el-button @click="handleReset">
+                <el-icon><Refresh /></el-icon>
+                重置
+              </el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
     </div>
 
@@ -431,19 +440,76 @@ export default {
   height: 100%;
 }
 
+.search-form {
+  background: #fff;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-form .el-row {
+  margin-bottom: 16px;
+}
+
+.search-form .el-row:last-child {
+  margin-bottom: 0;
+}
+
+.search-buttons {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.search-buttons .el-form-item {
+  margin-bottom: 0;
+}
+
+.search-buttons .el-button {
+  margin-left: 8px;
+}
+
+.search-buttons .el-button:first-child {
+  margin-left: 0;
+}
+
 .pagination-container {
   margin-top: 20px;
   display: flex;
   justify-content: center;
 }
 
+/* 优化审核状态下拉框样式 */
+:deep(.audit-status-dropdown) {
+  min-width: 140px !important;
+}
+
+:deep(.audit-status-dropdown .el-select-dropdown__item) {
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
 .order-detail :deep(.el-descriptions__label) {
   font-weight: 600;
 }
 
+@media (max-width: 1200px) {
+  .search-form .el-row .el-col {
+    margin-bottom: 16px;
+  }
+
+  .search-buttons {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 768px) {
+  .search-form {
+    padding: 16px;
+  }
+
   .search-form :deep(.el-form-item) {
-    display: block;
     margin-bottom: 16px;
   }
 
@@ -451,10 +517,16 @@ export default {
     display: block;
     text-align: left;
     padding: 0 0 8px 0;
+    width: 100% !important;
   }
 
   .search-form :deep(.el-form-item__content) {
     margin-left: 0 !important;
+  }
+
+  .search-buttons {
+    justify-content: center;
+    margin-top: 16px;
   }
 
   .button-group {
