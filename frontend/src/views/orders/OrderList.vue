@@ -117,6 +117,7 @@
         @selection-change="handleSelectionChange"
         row-key="id"
         style="width: 100%"
+        max-height="600"
       >
         <el-table-column type="selection" width="55" reserve-selection />
 
@@ -165,9 +166,10 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="middle" @click="viewOrderDetail(row)">
+              <el-icon><ViewIcon /></el-icon>
               查看详情
             </el-button>
           </template>
@@ -223,7 +225,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Upload, Download } from '@element-plus/icons-vue'
+import { Search, Refresh, Upload, Download, View } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 export default {
@@ -232,7 +234,8 @@ export default {
     Search,
     Refresh,
     Upload,
-    Download
+    Download,
+    ViewIcon: View
   },
   setup() {
     const store = useStore()
@@ -478,16 +481,6 @@ export default {
   margin-top: 20px;
   display: flex;
   justify-content: center;
-}
-
-/* 优化审核状态下拉框样式 */
-:deep(.audit-status-dropdown) {
-  min-width: 140px !important;
-}
-
-:deep(.audit-status-dropdown .el-select-dropdown__item) {
-  padding: 0 20px;
-  white-space: nowrap;
 }
 
 .order-detail :deep(.el-descriptions__label) {

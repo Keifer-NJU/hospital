@@ -121,7 +121,7 @@
 
         <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click.stop="viewTaskDetail(row)">
+            <el-button type="primary" link size="middle" @click.stop="viewTaskDetail(row)">
               <el-icon><ViewIcon /></el-icon>
               查看详情
             </el-button>
