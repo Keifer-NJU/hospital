@@ -14,197 +14,210 @@
       </div>
     </div>
 
-    <!-- 步骤条 -->
-    <div class="steps-container" v-if="task">
-      <div class="custom-steps">
-        <div class="step-item" :class="getStepItemClass('VALIDATE')">
-          <div class="step-icon" :class="getStepIconClass('VALIDATE')">
-            <span v-if="getStepStatus('VALIDATE') === 'finish'">✓</span>
-            <span v-else>1</span>
+    <!-- 主要内容区域 -->
+    <div class="main-content" v-if="task">
+      <!-- 任务概览卡片 -->
+      <div class="overview-card">
+        <!-- 步骤条和统计信息整合 -->
+        <div class="overview-header">
+          <div class="steps-section">
+            <div class="custom-steps">
+              <div class="step-item" :class="getStepItemClass('VALIDATE')">
+                <div class="step-icon" :class="getStepIconClass('VALIDATE')">
+                  <span v-if="getStepStatus('VALIDATE') === 'finish'">✓</span>
+                  <span v-else>1</span>
+                </div>
+                <span class="step-title">数据校验</span>
+              </div>
+
+              <div class="step-line" :class="{ active: currentStepIndex > 0 }"></div>
+
+              <div class="step-item" :class="getStepItemClass('UPLOAD')">
+                <div class="step-icon" :class="getStepIconClass('UPLOAD')">
+                  <span v-if="getStepStatus('UPLOAD') === 'finish'">✓</span>
+                  <span v-else>2</span>
+                </div>
+                <span class="step-title">数据填报</span>
+              </div>
+            </div>
           </div>
-          <span class="step-title">数据校验</span>
-        </div>
 
-        <div class="step-line" :class="{ active: currentStepIndex > 0 }"></div>
+          <!-- 右侧操作按钮 -->
+          <div class="action-section">
+            <el-button
+              v-if="task.currentStep === 'VALIDATE' && task.status === 'COMPLETED'"
+              type="primary"
+              size="large"
+              @click="goToUploadStep"
+              :disabled="task.failedCount === task.totalCount"
+            >
+              <el-icon><Right /></el-icon>
+              下一步
+            </el-button>
 
-        <div class="step-item" :class="getStepItemClass('UPLOAD')">
-          <div class="step-icon" :class="getStepIconClass('UPLOAD')">
-            <span v-if="getStepStatus('UPLOAD') === 'finish'">✓</span>
-            <span v-else>2</span>
+            <div class="button-row" v-if="task.currentStep === 'UPLOAD' && task.status === 'PENDING'">
+              <el-button
+                type="primary"
+                size="large"
+                @click="startUpload"
+              >
+                <el-icon><Upload /></el-icon>
+                开始填报
+              </el-button>
+
+              <el-button @click="goBackToValidate">
+                <el-icon><Back /></el-icon>
+                返回校验
+              </el-button>
+            </div>
+
+            <el-button
+              v-if="task.status === 'RUNNING'"
+              type="danger"
+              @click="stopTask"
+            >
+              <el-icon><VideoPause /></el-icon>
+              停止任务
+            </el-button>
           </div>
-          <span class="step-title">数据填报</span>
+        </div>
+
+        <!-- 统计和进度信息 -->
+        <div class="progress-stats-section">
+          <!-- 数据统计 -->
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ task.totalCount }}</div>
+              <div class="stat-label">总数据��数</div>
+            </div>
+            <div class="stat-item success">
+              <div class="stat-value">{{ task.successCount }}</div>
+              <div class="stat-label">成功</div>
+            </div>
+            <div class="stat-item danger">
+              <div class="stat-value">{{ task.failedCount }}</div>
+              <div class="stat-label">失败</div>
+            </div>
+            <div class="stat-item warning">
+              <div class="stat-value">{{ processingCount }}</div>
+              <div class="stat-label">正在处理</div>
+            </div>
+          </div>
+
+          <!-- 进度条区域 -->
+          <div class="progress-section">
+            <div class="progress-info">
+              <span class="progress-text">{{ currentStepText }}</span>
+              <span class="progress-percentage">{{ task.progress }}%</span>
+            </div>
+            <el-progress
+              :percentage="task.progress"
+              :status="getProgressStatus(task.status)"
+              :stroke-width="8"
+              class="main-progress"
+            />
+            <div class="progress-detail" v-if="currentProcessingItem">
+              {{ currentProcessingItem }}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 数据统计 -->
-    <el-row :gutter="20" class="mb-20" v-if="task">
-      <el-col :span="6">
-        <div class="stats-card">
-          <div class="stats-number">{{ task.totalCount }}</div>
-          <div class="stats-label">总数据量</div>
+      <!-- 数据表格区域 -->
+      <div class="table-section">
+        <div class="section-header">
+          <div class="table-info">
+            共 {{ task.orders?.length || 0 }} 条记录
+          </div>
         </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stats-card" style="border-left-color: var(--success-color)">
-          <div class="stats-number" style="color: var(--success-color)">{{ task.successCount }}</div>
-          <div class="stats-label">成功</div>
+
+        <div class="table-content">
+          <!-- 表格内容保持不变 -->
+          <el-table
+            v-loading="tableLoading"
+            :data="filteredTableData"
+            style="width: 100%"
+            max-height="600"
+          >
+            <!-- 基础订单信息 -->
+            <el-table-column prop="orderNo" label="入库单号" width="140" fixed="left" />
+            <el-table-column prop="materialName" label="物资名称" width="180" show-overflow-tooltip />
+            <el-table-column prop="specification" label="规格型号" width="150" show-overflow-tooltip />
+            <el-table-column prop="brand" label="品牌" width="120" show-overflow-tooltip />
+            <el-table-column prop="supplierName" label="供货单位" width="180" show-overflow-tooltip />
+            <el-table-column prop="quantity" label="数量" width="100" align="right">
+              <template #default="{ row }">
+                {{ formatNumber(row.quantity) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="plannedPrice" label="计划价格" width="120" align="right">
+              <template #default="{ row }">
+                ¥{{ formatNumber(row.plannedPrice) }}
+              </template>
+            </el-table-column>
+
+            <!-- 扩展信息 -->
+            <el-table-column prop="productId" label="产品ID" width="120" show-overflow-tooltip />
+
+            <!-- 根据当前步骤显示不同的状态列 -->
+            <template v-if="task.currentStep === 'VALIDATE'">
+              <el-table-column prop="validateStatus" label="校验状态" width="100" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="getValidateStatusTagType(row.validateStatus)" size="small">
+                    {{ getValidateStatusText(row.validateStatus) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="validateFailReason" label="失败原因" width="200" show-overflow-tooltip />
+            </template>
+
+            <template v-else>
+              <el-table-column prop="uploadStatus" label="填报状态" width="100" align="center">
+                <template #default="{ row }">
+                  <el-tag :type="getUploadStatusTagType(row.uploadStatus)" size="small">
+                    {{ getUploadStatusText(row.uploadStatus) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="uploadFailReason" label="失败原因" width="200" show-overflow-tooltip />
+              <el-table-column prop="settlementType" label="结算类型" width="120">
+                <template #default="{ row }">
+                  {{ getSettlementTypeText(row.settlementType) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="type" label="类型" width="100">
+                <template #default="{ row }">
+                  {{ getTypeText(row.type) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="productPrice" label="产品价格" width="120" align="right">
+                <template #default="{ row }">
+                  <span v-if="row.productPrice">¥{{ formatNumber(row.productPrice) }}</span>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="maxReferencePrice" label="省最高参考价" width="140" align="right">
+                <template #default="{ row }">
+                  <span v-if="row.maxReferencePrice">¥{{ formatNumber(row.maxReferencePrice) }}</span>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+            </template>
+          </el-table>
+
+          <!-- 分页 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="pagination.currentPage"
+              v-model:page-size="pagination.pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="task.orders?.length || 0"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+            />
+          </div>
         </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stats-card" style="border-left-color: var(--danger-color)">
-          <div class="stats-number" style="color: var(--danger-color)">{{ task.failedCount }}</div>
-          <div class="stats-label">失败</div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stats-card" style="border-left-color: var(--warning-color)">
-          <div class="stats-number" style="color: var(--warning-color)">{{ processingCount }}</div>
-          <div class="stats-label">正在处理</div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 进度条 -->
-    <div class="progress-container" v-if="task">
-      <div class="progress-info">
-        <span class="progress-text">{{ currentStepText }}</span>
-        <span class="progress-percentage">{{ task.progress }}%</span>
-      </div>
-      <el-progress
-        :percentage="task.progress"
-        :status="getProgressStatus(task.status)"
-        :stroke-width="12"
-      >
-        <template #default="{ percentage }">
-          <span class="progress-text">{{ percentage }}%</span>
-        </template>
-      </el-progress>
-      <div class="progress-detail" v-if="currentProcessingItem">
-        {{ currentProcessingItem }}
-      </div>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="button-group" v-if="task">
-      <el-button
-        v-if="task.currentStep === 'VALIDATE' && task.status === 'COMPLETED'"
-        type="primary"
-        @click="startUpload"
-        :disabled="task.failedCount === task.totalCount"
-      >
-        <el-icon><Upload /></el-icon>
-        开始填报
-      </el-button>
-
-      <el-button
-        v-if="task.currentStep === 'UPLOAD' && task.status !== 'COMPLETED'"
-        @click="goBackToValidate"
-      >
-        <el-icon><Back /></el-icon>
-        返回校验
-      </el-button>
-
-      <el-button
-        v-if="task.status === 'RUNNING'"
-        type="danger"
-        @click="stopTask"
-      >
-        <el-icon><VideoPause /></el-icon>
-        停止任务
-      </el-button>
-
-      <el-button @click="exportTaskData" :loading="exportLoading">
-        <el-icon><Download /></el-icon>
-        导出结果
-      </el-button>
-    </div>
-
-    <!-- 数据表格 -->
-    <div class="table-container" v-if="task && task.orders">
-      <el-table
-        v-loading="tableLoading"
-        :data="filteredTableData"
-        style="width: 100%"
-        max-height="600"
-      >
-        <!-- 基础订单信息 -->
-        <el-table-column prop="orderNo" label="入库单号" width="140" fixed="left" />
-        <el-table-column prop="materialName" label="物资名称" width="180" show-overflow-tooltip />
-        <el-table-column prop="specification" label="规格型号" width="150" show-overflow-tooltip />
-        <el-table-column prop="brand" label="品牌" width="120" show-overflow-tooltip />
-        <el-table-column prop="supplierName" label="供货单位" width="180" show-overflow-tooltip />
-        <el-table-column prop="quantity" label="数量" width="100" align="right">
-          <template #default="{ row }">
-            {{ formatNumber(row.quantity) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="plannedPrice" label="计划价格" width="120" align="right">
-          <template #default="{ row }">
-            ¥{{ formatNumber(row.plannedPrice) }}
-          </template>
-        </el-table-column>
-
-        <!-- 扩展信息 -->
-        <el-table-column prop="productId" label="产品ID" width="120" show-overflow-tooltip />
-
-        <!-- 根据当前步骤显示不同的状态列 -->
-        <template v-if="task.currentStep === 'VALIDATE'">
-          <el-table-column prop="validateStatus" label="校验状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="getValidateStatusTagType(row.validateStatus)" size="small">
-                {{ getValidateStatusText(row.validateStatus) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="validateFailReason" label="失败原因" width="200" show-overflow-tooltip />
-        </template>
-
-        <template v-else>
-          <el-table-column prop="uploadStatus" label="填报状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="getUploadStatusTagType(row.uploadStatus)" size="small">
-                {{ getUploadStatusText(row.uploadStatus) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="uploadFailReason" label="失败原因" width="200" show-overflow-tooltip />
-          <el-table-column prop="settlementType" label="结算类型" width="120">
-            <template #default="{ row }">
-              {{ getSettlementTypeText(row.settlementType) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="type" label="类型" width="100">
-            <template #default="{ row }">
-              {{ getTypeText(row.type) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="productPrice" label="产品价格" width="120" align="right">
-            <template #default="{ row }">
-              <span v-if="row.productPrice">¥{{ formatNumber(row.productPrice) }}</span>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="maxReferencePrice" label="省最高参考价" width="140" align="right">
-            <template #default="{ row }">
-              <span v-if="row.maxReferencePrice">¥{{ formatNumber(row.maxReferencePrice) }}</span>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-        </template>
-      </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.currentPage"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="task.orders?.length || 0"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
       </div>
     </div>
   </div>
@@ -220,7 +233,7 @@ import {
   Upload,
   Back,
   VideoPause,
-  Download
+  Right
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
@@ -231,7 +244,7 @@ export default {
     Upload,
     Back,
     VideoPause,
-    Download
+    Right
   },
   setup() {
     const store = useStore()
@@ -239,7 +252,6 @@ export default {
     const route = useRoute()
 
     const tableLoading = ref(false)
-    const exportLoading = ref(false)
     const currentProcessingItem = ref('')
     const wsConnection = ref(null)
 
@@ -363,13 +375,26 @@ export default {
       router.push('/dashboard/tasks')
     }
 
+    // 数据校验完成，进入填报步骤
+    const goToUploadStep = () => {
+      if (task.value) {
+        store.commit('UPDATE_TASK_PROGRESS', {
+          taskId: task.value.id,
+          progress: {
+            currentStep: 'UPLOAD',
+            status: 'PENDING'
+          }
+        })
+        ElMessage.success('已进入数据填报步骤')
+      }
+    }
+
     // 开始填报
     const startUpload = () => {
       if (task.value) {
         store.commit('UPDATE_TASK_PROGRESS', {
           taskId: task.value.id,
           progress: {
-            currentStep: 'UPLOAD',
             status: 'RUNNING',
             progress: 0
           }
@@ -379,7 +404,7 @@ export default {
       }
     }
 
-    // 返回校验
+    // 返���校验
     const goBackToValidate = () => {
       if (task.value) {
         store.commit('UPDATE_TASK_PROGRESS', {
@@ -397,7 +422,7 @@ export default {
     const stopTask = async () => {
       try {
         await ElMessageBox.confirm(
-          '确定要停止当前任务吗？',
+          '确���要停止当前任务吗？',
           '确认停止',
           {
             confirmButtonText: '确定',
@@ -420,15 +445,6 @@ export default {
       }
     }
 
-    // 导出任务数据
-    const exportTaskData = () => {
-      exportLoading.value = true
-      setTimeout(() => {
-        ElMessage.success('导出成功')
-        exportLoading.value = false
-      }, 2000)
-    }
-
     // 分页处理
     const handleSizeChange = (val) => {
       pagination.pageSize = val
@@ -438,7 +454,7 @@ export default {
       pagination.currentPage = val
     }
 
-    // 格式化和状态映射函数
+    // 格式化和状态映射函��
     const formatNumber = (value) => {
       return Number(value).toLocaleString()
     }
@@ -539,7 +555,6 @@ export default {
     return {
       task,
       tableLoading,
-      exportLoading,
       currentProcessingItem,
       pagination,
       currentStepIndex,
@@ -547,10 +562,10 @@ export default {
       processingCount,
       filteredTableData,
       goBack,
+      goToUploadStep,
       startUpload,
       goBackToValidate,
       stopTask,
-      exportTaskData,
       handleSizeChange,
       handleCurrentChange,
       formatNumber,
@@ -609,30 +624,58 @@ export default {
   display: flex;
 }
 
-/* 步骤条样式 */
-.steps-container {
+/* 主要内容区域 */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 任务概览卡片 */
+.overview-card {
   background: #fff;
-  padding: 16px 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  border: 1px solid #ebeef5;
+}
+
+/* 概览头部 */
+.overview-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.steps-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  left: 45%;
+  transform: translateX(-50%);
+  width: 100%;
+  pointer-events: none;
+}
+
+.steps-section .custom-steps {
+  pointer-events: all;
 }
 
 .custom-steps {
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 500px;
-  margin: 0 auto;
-  position: relative;
+  width: 100%;
+  max-width: 360px;
 }
 
 .step-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  position: relative;
-  z-index: 2;
 }
 
 .step-icon {
@@ -645,27 +688,22 @@ export default {
   justify-content: center;
   border-radius: 50%;
   border: 2px solid;
-  flex-shrink: 0;
   transition: all 0.3s ease;
 }
 
 .step-title {
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.2;
-  margin: 0;
   white-space: nowrap;
-  transition: all 0.3s ease;
 }
 
-/* 步骤连接线 */
 .step-line {
   flex: 1;
   height: 2px;
   background: #e4e7ed;
-  margin: 0 24px;
-  position: relative;
-  transition: all 0.3s ease;
+  margin: 0 16px;
+  min-width: 60px;
+  transition: background 0.3s ease;
 }
 
 .step-line.active {
@@ -675,7 +713,7 @@ export default {
 /* 步骤状态样式 */
 .step-item.waiting .step-icon {
   background: #fff;
-  border-color: #c0c4cc;
+  border-color: #dcdfe6;
   color: #c0c4cc;
 }
 
@@ -705,69 +743,234 @@ export default {
   font-weight: 600;
 }
 
-/* 图标类样式 */
-.icon-waiting {
-  background: #fff;
-  border-color: #c0c4cc;
-  color: #c0c4cc;
+/* 操作按钮区域 */
+.action-section {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+  min-width: 160px;
 }
 
-.icon-active {
-  background: #409eff;
-  border-color: #409eff;
-  color: #fff;
+.button-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  justify-content: flex-end;
 }
 
-.icon-completed {
-  background: #67c23a;
-  border-color: #67c23a;
-  color: #fff;
+/* 统计和进度区域 */
+.progress-stats-section {
+  padding-top: 24px;
+  border-top: 1px solid #ebeef5;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  background: #f8f9ff;
+  border-radius: 8px;
+  padding: 20px 16px;
+  text-align: center;
+  border-left: 4px solid #409eff;
+  transition: transform 0.2s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+}
+
+.stat-item.success {
+  border-left-color: #67c23a;
+  background: #f0fff4;
+}
+
+.stat-item.danger {
+  border-left-color: #f56c6c;
+  background: #fff5f5;
+}
+
+.stat-item.warning {
+  border-left-color: #e6a23c;
+  background: #fefce8;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.stat-item.success .stat-value {
+  color: #67c23a;
+}
+
+.stat-item.danger .stat-value {
+  color: #f56c6c;
+}
+
+.stat-item.warning .stat-value {
+  color: #e6a23c;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+/* 进度条区域 */
+.progress-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.progress-text {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.progress-percentage {
+  font-size: 18px;
+  color: #409eff;
+  font-weight: 700;
 }
 
 .progress-detail {
-  margin-top: 8px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: #909399;
   text-align: center;
+  margin-top: 8px;
+}
+
+/* 数据表格区域 */
+.table-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ebeef5;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f5f7fa 100%);
+  border-bottom: 1px solid #ebeef5;
+}
+
+.table-info {
+  font-size: 14px;
+  color: #606266;
+  background: rgba(64, 158, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
 }
 
 .pagination-container {
-  margin-top: 20px;
+  padding: 20px 24px;
+  background: #fafbfc;
+  border-top: 1px solid #ebeef5;
   display: flex;
   justify-content: center;
 }
 
-@media (max-width: 768px) {
-  .page-header {
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .overview-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: stretch;
+    gap: 20px;
   }
 
-  .header-left {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .header-right {
-    width: 100%;
+  .action-section {
+    flex-direction: row;
     justify-content: flex-end;
-  }
-
-  .steps-container {
-    padding: 16px;
-  }
-
-  .stats-card {
-    margin-bottom: 16px;
-  }
-
-  .button-group {
+    align-items: center;
     flex-wrap: wrap;
   }
 
-  .button-group .el-button {
-    margin-bottom: 8px;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    gap: 16px;
+  }
+
+  .overview-card,
+  .table-section {
+    padding: 16px;
+    border-radius: 8px;
+    margin: 0 -16px;
+  }
+
+  .section-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-item {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .progress-section {
+    padding: 16px;
+  }
+
+  .action-section {
+    width: 100%;
+  }
+
+  .action-section .el-button {
+    flex: 1;
+    min-width: auto;
+  }
+
+  .custom-steps {
+    max-width: none;
+    justify-content: space-between;
+  }
+
+  .step-line {
+    margin: 0 8px;
+    min-width: 20px;
+  }
+
+  .pagination-container {
+    padding: 16px;
   }
 }
 </style>
