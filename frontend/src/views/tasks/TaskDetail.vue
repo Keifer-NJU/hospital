@@ -47,7 +47,6 @@
             <el-button
               v-if="task.currentStep === 'VALIDATE' && task.status === 'COMPLETED'"
               type="primary"
-              size="large"
               @click="goToUploadStep"
               :disabled="task.failedCount === task.totalCount"
             >
@@ -57,7 +56,6 @@
             <div class="button-row" v-if="task.currentStep === 'UPLOAD' && task.status === 'PENDING'">
               <el-button
                 type="primary"
-                size="large"
                 @click="startUpload"
               >
                 开始填报
@@ -75,6 +73,16 @@
             >
               <el-icon><VideoPause /></el-icon>
               停止任务
+            </el-button>
+
+            <!-- 继续任务按钮 -->
+            <el-button
+              v-if="task.status === 'FAILED'"
+              type="success"
+              @click="continueTask"
+            >
+              <el-icon><VideoPlay /></el-icon>
+              继续任务
             </el-button>
           </div>
         </div>
@@ -228,6 +236,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft,
   VideoPause,
+  VideoPlay
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
@@ -236,6 +245,7 @@ export default {
   components: {
     ArrowLeft,
     VideoPause,
+    VideoPlay
   },
   setup() {
     const store = useStore()
@@ -436,6 +446,25 @@ export default {
       }
     }
 
+    // 继续任务
+    const continueTask = async () => {
+      if (task.value) {
+        // 直接设置为运行状态，而不是PENDING
+        store.commit('UPDATE_TASK_PROGRESS', {
+          taskId: task.value.id,
+          progress: {
+            status: 'RUNNING',  // 直接设为RUNNING状态
+            // 保持当前进度，不重置
+          }
+        })
+
+        // 重新连接WebSocket
+        connectWebSocket()
+
+        ElMessage.success('任务已继续')
+      }
+    }
+
     // 分页处理
     const handleSizeChange = (val) => {
       pagination.pageSize = val
@@ -557,6 +586,7 @@ export default {
       startUpload,
       goBackToValidate,
       stopTask,
+      continueTask,
       handleSizeChange,
       handleCurrentChange,
       formatNumber,
@@ -635,8 +665,9 @@ export default {
 .overview-header {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 24px;
-  position: relative;
+  min-height: 40px; /* 确保最小高度，避免布局塌陷 */
 }
 
 .steps-section {
@@ -644,15 +675,9 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  position: absolute;
-  left: 45%;
-  transform: translateX(-50%);
-  width: 100%;
-  pointer-events: none;
-}
-
-.steps-section .custom-steps {
-  pointer-events: all;
+  justify-content: center;
+  padding: 0 20px; /* 添加左右内边距保护步骤条 */
+  min-width: 360px; /* 确保步骤条有足够的最小宽度 */
 }
 
 .custom-steps {
