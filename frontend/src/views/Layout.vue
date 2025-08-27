@@ -141,9 +141,10 @@ export default {
 }
 
 .sidebar {
-  background-color: #fff;
-  box-shadow: 1px 0 6px rgba(0, 21, 41, 0.35);
+  background-color: #f3f7fc !important;
+  box-shadow: 2px 0 8px 0 rgba(0, 21, 41, 0.06);
   z-index: 1001;
+  border-right: 1px solid rgba(0, 21, 41, 0.04);
 }
 
 .logo {
@@ -151,19 +152,19 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #f3f7fc !important;
 }
 
 .logo h2 {
   color: #1677ff;
   font-size: 20px;
   font-weight: 600;
-  margin: 2;
 }
 
 .header {
-  background-color: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  background-color: #f3f7fc !important;
+  border-bottom: 1px solid rgba(228, 231, 237, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 21, 41, 0.03);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -210,6 +211,10 @@ export default {
   min-height: calc(100vh - 60px);
 }
 
+:deep(.el-menu) {
+  border-right: none !important;
+  background-color: #f3f7fc !important;
+}
 :deep(.el-menu-item) {
   height: 50px;
   line-height: 50px;
@@ -267,9 +272,10 @@ export default {
 }
 
 :deep(.el-sub-menu .el-menu-item) {
-  background-color: #fafafa !important;
+  background-color: #f3f7fc !important;
   color: #000000 !important;
-  font-weight: 400;
+  font-weight: 500;
+  font-size: 14px;
   padding-left: 60px !important;
 }
 

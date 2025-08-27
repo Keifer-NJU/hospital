@@ -51,7 +51,6 @@
               @click="goToUploadStep"
               :disabled="task.failedCount === task.totalCount"
             >
-              <el-icon><Right /></el-icon>
               下一步
             </el-button>
 
@@ -61,12 +60,10 @@
                 size="large"
                 @click="startUpload"
               >
-                <el-icon><Upload /></el-icon>
                 开始填报
               </el-button>
 
               <el-button @click="goBackToValidate">
-                <el-icon><Back /></el-icon>
                 返回校验
               </el-button>
             </div>
@@ -88,7 +85,7 @@
           <div class="stats-grid">
             <div class="stat-item">
               <div class="stat-value">{{ task.totalCount }}</div>
-              <div class="stat-label">总数据��数</div>
+              <div class="stat-label">总数据量</div>
             </div>
             <div class="stat-item success">
               <div class="stat-value">{{ task.successCount }}</div>
@@ -230,10 +227,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft,
-  Upload,
-  Back,
   VideoPause,
-  Right
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
@@ -241,10 +235,7 @@ export default {
   name: 'TaskDetail',
   components: {
     ArrowLeft,
-    Upload,
-    Back,
     VideoPause,
-    Right
   },
   setup() {
     const store = useStore()
@@ -404,7 +395,7 @@ export default {
       }
     }
 
-    // 返���校验
+    // 返回校验
     const goBackToValidate = () => {
       if (task.value) {
         store.commit('UPDATE_TASK_PROGRESS', {
@@ -422,7 +413,7 @@ export default {
     const stopTask = async () => {
       try {
         await ElMessageBox.confirm(
-          '确���要停止当前任务吗？',
+          '确定要停止当前任务吗？',
           '确认停止',
           {
             confirmButtonText: '确定',
@@ -454,7 +445,7 @@ export default {
       pagination.currentPage = val
     }
 
-    // 格式化和状态映射函��
+    // 格式化和状态映射函数
     const formatNumber = (value) => {
       return Number(value).toLocaleString()
     }
