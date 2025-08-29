@@ -49,15 +49,22 @@
             </el-breadcrumb>
           </div>
           <div class="header-right">
-            <el-dropdown @command="handleUserCommand">
-              <span class="user-info">
-                <el-icon><User /></el-icon>
-                {{ currentUser?.name || '用户' }}
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </span>
+            <el-dropdown @command="handleUserCommand" placement="bottom-end">
+              <div class="user-avatar">
+                <el-icon class="avatar-icon"><Avatar /></el-icon>
+              </div>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                  <el-dropdown-item disabled class="user-info-item">
+                    <div class="user-details">
+                      <el-icon class="user-icon"><Avatar /></el-icon>
+                      <span class="user-name">{{ currentUser?.name || '用户' }}</span>
+                    </div>
+                  </el-dropdown-item>
+                  <el-dropdown-item divided command="logout" class="logout-item">
+                    <el-icon class="logout-icon"><SwitchButton /></el-icon>
+                    <span>退出登录</span>
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -83,8 +90,8 @@ import {
   List,
   Setting,
   QuestionFilled,
-  User,
-  ArrowDown,
+  Avatar,
+  SwitchButton,
   Files
 } from '@element-plus/icons-vue'
 
@@ -95,8 +102,8 @@ export default {
     List,
     Setting,
     QuestionFilled,
-    User,
-    ArrowDown,
+    Avatar,
+    SwitchButton,
     Files
   },
   setup() {
@@ -181,138 +188,85 @@ export default {
   align-items: center;
 }
 
-.user-info {
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1677ff, #40a9ff);
   display: flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-  color: #606266;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(22, 119, 255, 0.2);
+}
+
+.user-avatar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.3);
+}
+
+.avatar-icon {
+  color: white;
+  font-size: 18px;
+}
+
+.user-info-item {
+  padding: 12px 16px !important;
+  cursor: default !important;
+}
+
+.user-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-icon {
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #303133;
   font-size: 14px;
 }
 
-.user-info:hover {
-  background-color: #f5f7fa;
+.logout-item {
+  color: #f56c6c !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.user-info .el-icon {
-  margin-right: 6px;
+.logout-item:hover {
+  background-color: #fef0f0 !important;
 }
 
-.user-info .el-icon--right {
-  margin-left: 6px;
-  margin-right: 0;
+.logout-icon {
+  font-size: 14px;
 }
 
 .main-content {
-  background-color: #f3f7fc !important;
+  background-color: #f5f7fa;
   padding: 24px;
-  min-height: calc(100vh - 60px);
 }
 
-:deep(.el-menu) {
-  border-right: none !important;
-  background-color: #f3f7fc !important;
+/* 下拉菜单样式优化 */
+:deep(.el-dropdown-menu) {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 21, 41, 0.08);
+  min-width: 160px;
 }
-:deep(.el-menu-item) {
-  height: 50px;
-  line-height: 50px;
-  border-radius: 0;
-  color: #000000 !important;
-  font-weight: 500;
+
+:deep(.el-dropdown-menu__item) {
+  padding: 8px 12px;
   font-size: 14px;
 }
 
-:deep(.el-menu-item .el-icon) {
-  color: #000000 !important;
-  margin-right: 8px;
-}
-
-:deep(.el-menu-item.is-active) {
-  background-color: #e6f3ff !important;
-  border-right: 3px solid #1890ff;
-  color: #1890ff !important;
-  font-weight: 600;
-}
-
-:deep(.el-menu-item.is-active .el-icon) {
-  color: #1890ff !important;
-}
-
-:deep(.el-menu-item:hover) {
-  background-color: #f5f7fa !important;
-  color: #1890ff !important;
-}
-
-:deep(.el-menu-item:hover .el-icon) {
-  color: #1890ff !important;
-}
-
-:deep(.el-sub-menu__title) {
-  height: 50px;
-  line-height: 50px;
-  color: #000000 !important;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-:deep(.el-sub-menu__title .el-icon) {
-  color: #000000 !important;
-  margin-right: 8px;
-}
-
-:deep(.el-sub-menu__title:hover) {
-  background-color: #f5f7fa !important;
-  color: #1890ff !important;
-}
-
-:deep(.el-sub-menu__title:hover .el-icon) {
-  color: #1890ff !important;
-}
-
-:deep(.el-sub-menu .el-menu-item) {
-  background-color: #f3f7fc !important;
-  color: #000000 !important;
-  font-weight: 500;
-  font-size: 14px;
-  padding-left: 60px !important;
-}
-
-:deep(.el-sub-menu .el-menu-item .el-icon) {
-  color: #000000 !important;
-}
-
-:deep(.el-sub-menu .el-menu-item.is-active) {
-  background-color: #e6f3ff !important;
-  color: #1890ff !important;
-  font-weight: 600;
-}
-
-:deep(.el-sub-menu .el-menu-item.is-active .el-icon) {
-  color: #1890ff !important;
-}
-
-:deep(.el-sub-menu .el-menu-item:hover) {
-  background-color: #f0f0f0 !important;
-  color: #1890ff !important;
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    width: 64px !important;
-  }
-
-  .logo h2 {
-    display: none;
-  }
-
-  :deep(.el-menu-item span) {
-    display: none;
-  }
-
-  .main-content {
-    padding: 16px;
-  }
+:deep(.el-dropdown-menu__item--divided::before) {
+  margin: 4px 0;
 }
 </style>
