@@ -44,6 +44,15 @@
 
           <!-- 右侧操作按钮 -->
           <div class="action-section">
+            <!-- 数据校验步骤的按钮 -->
+            <el-button
+              v-if="task.currentStep === 'VALIDATE' && task.status === 'PENDING'"
+              type="primary"
+              @click="startValidate"
+            >
+              开始校验
+            </el-button>
+
             <el-button
               v-if="task.currentStep === 'VALIDATE' && task.status === 'COMPLETED'"
               type="primary"
@@ -53,6 +62,7 @@
               下一步
             </el-button>
 
+            <!-- 数据填报步骤的按钮 -->
             <div class="button-row" v-if="task.currentStep === 'UPLOAD' && task.status === 'PENDING'">
               <el-button
                 type="primary"
@@ -255,6 +265,7 @@ export default {
     const tableLoading = ref(false)
     const currentProcessingItem = ref('')
     const wsConnection = ref(null)
+    const progressInterval = ref(null) // 添加定时器引用
 
     const pagination = reactive({
       currentPage: 1,
@@ -291,29 +302,55 @@ export default {
 
     // 模拟WebSocket连接
     const connectWebSocket = () => {
+      // 清除之前的定时器
+      if (progressInterval.value) {
+        clearInterval(progressInterval.value)
+        progressInterval.value = null
+      }
+
       // 这里应该连接真实的WebSocket
       // 模拟进度更新
       if (task.value?.status === 'RUNNING') {
-        const interval = setInterval(() => {
-          if (task.value && task.value.progress < 100) {
-            const newProgress = Math.min(task.value.progress + Math.random() * 10, 100)
+        progressInterval.value = setInterval(() => {
+          // 检查任务状态，如果不是运行状态则停止
+          if (!task.value || task.value.status !== 'RUNNING') {
+            clearInterval(progressInterval.value)
+            progressInterval.value = null
+            return
+          }
+
+          if (task.value.progress < 100) {
+            const newProgress = Math.min(task.value.progress + Math.random() * 5 + 2, 100)
             const currentIndex = Math.floor((newProgress / 100) * task.value.totalCount)
             const currentOrder = task.value.orders[currentIndex]
 
+            // 更新当前处理项显示
             if (currentOrder) {
-              currentProcessingItem.value = `正在处理第 ${currentIndex + 1}/${task.value.totalCount} 条：${currentOrder.orderNo}`
+              const stepText = task.value.currentStep === 'VALIDATE' ? '校验' : '填报'
+              currentProcessingItem.value = `正在${stepText}第 ${currentIndex + 1}/${task.value.totalCount} 条：${currentOrder.orderNo}`
             }
+
+            // 更新数据状态 - 根据当前步骤更新不同的状态字段
+            updateDataStatus(currentIndex, newProgress)
+
+            // 更新任务整体进度
+            const successRate = 0.85 // 85%成功率
+            const failureRate = 0.1  // 10%失败率
+            const processedCount = Math.floor((newProgress / 100) * task.value.totalCount)
 
             store.commit('UPDATE_TASK_PROGRESS', {
               taskId: task.value.id,
               progress: {
                 progress: Math.floor(newProgress),
-                successCount: Math.floor((newProgress / 100) * task.value.totalCount * 0.8),
-                failedCount: Math.floor((newProgress / 100) * task.value.totalCount * 0.1)
+                successCount: Math.floor(processedCount * successRate),
+                failedCount: Math.floor(processedCount * failureRate)
               }
             })
 
             if (newProgress >= 100) {
+              // 任务完成时，确保所有数据都有最终状态
+              finalizeAllDataStatus()
+
               store.commit('UPDATE_TASK_PROGRESS', {
                 taskId: task.value.id,
                 progress: {
@@ -322,15 +359,104 @@ export default {
                 }
               })
               currentProcessingItem.value = '处理完成'
-              clearInterval(interval)
+              clearInterval(progressInterval.value)
+              progressInterval.value = null
             }
           } else {
-            clearInterval(interval)
+            clearInterval(progressInterval.value)
+            progressInterval.value = null
           }
-        }, 2000)
+        }, 1500) // 更频繁的更新，更好的用户体验
 
-        return () => clearInterval(interval)
+        return () => {
+          if (progressInterval.value) {
+            clearInterval(progressInterval.value)
+            progressInterval.value = null
+          }
+        }
       }
+    }
+
+    // 更新数据状态的函数
+    const updateDataStatus = (currentIndex, progress) => {
+      if (!task.value?.orders) return
+
+      const currentStep = task.value.currentStep
+      const statusField = currentStep === 'VALIDATE' ? 'validateStatus' : 'uploadStatus'
+      const processingStatus = currentStep === 'VALIDATE' ? 'VALIDATING' : 'UPLOADING'
+
+      // 更新当前正在处理的数据状态
+      if (task.value.orders[currentIndex]) {
+        task.value.orders[currentIndex][statusField] = processingStatus
+      }
+
+      // 根据进度随机设置已处理数据的最终状态
+      for (let i = 0; i < currentIndex; i++) {
+        const order = task.value.orders[i]
+        if (order && order[statusField] === processingStatus) {
+          // 85%成功率，15%失败率
+          const isSuccess = Math.random() < 0.85
+          order[statusField] = isSuccess ? 'SUCCESS' : 'FAILED'
+
+          // 只有失败的数据才设置失败原因，成功的清空失败原因
+          const reasonField = currentStep === 'VALIDATE' ? 'validateFailReason' : 'uploadFailReason'
+          if (!isSuccess) {
+            const failureReasons = currentStep === 'VALIDATE'
+              ? ['产品信息不匹配', '供应商信息错误', '价格异常', '数据格式错误']
+              : ['网络连接超时', '系统繁忙', '数据验证失败', '上传服务异常']
+
+            order[reasonField] = failureReasons[Math.floor(Math.random() * failureReasons.length)]
+          } else {
+            // 成功的数据清空失败原因
+            order[reasonField] = ''
+          }
+        }
+      }
+    }
+
+    // 任务完成时确保所有数据都有最终状态
+    const finalizeAllDataStatus = () => {
+      if (!task.value?.orders) return
+
+      const currentStep = task.value.currentStep
+      const statusField = currentStep === 'VALIDATE' ? 'validateStatus' : 'uploadStatus'
+      const processingStatus = currentStep === 'VALIDATE' ? 'VALIDATING' : 'UPLOADING'
+
+      task.value.orders.forEach(order => {
+        if (order[statusField] === 'PENDING' || order[statusField] === processingStatus) {
+          // 最后处理的数据也按照成功率分配状态
+          const isSuccess = Math.random() < 0.85
+          order[statusField] = isSuccess ? 'SUCCESS' : 'FAILED'
+
+          // 只有失败的数据才设置失败原因，成功的清空失败原因
+          const reasonField = currentStep === 'VALIDATE' ? 'validateFailReason' : 'uploadFailReason'
+          if (!isSuccess) {
+            const failureReasons = currentStep === 'VALIDATE'
+              ? ['产品信息不匹配', '供应商信息错误', '价格异常', '数据格式错误']
+              : ['网络连接超时', '系统繁忙', '数据验证失败', '上传服务异常']
+
+            order[reasonField] = failureReasons[Math.floor(Math.random() * failureReasons.length)]
+          } else {
+            // 成功的数据清空失败原因
+            order[reasonField] = ''
+          }
+        }
+      })
+    }
+
+    // 重置数据状态的函数
+    const resetDataStatus = () => {
+      if (!task.value?.orders) return
+
+      const currentStep = task.value.currentStep
+      const statusField = currentStep === 'VALIDATE' ? 'validateStatus' : 'uploadStatus'
+      const reasonField = currentStep === 'VALIDATE' ? 'validateFailReason' : 'uploadFailReason'
+
+      // 将所有数据状态重置为PENDING
+      task.value.orders.forEach(order => {
+        order[statusField] = 'PENDING'
+        order[reasonField] = ''
+      })
     }
 
     // 获取任务详情
@@ -340,12 +466,12 @@ export default {
       const mockTask = {
         id: parseInt(taskId),
         name: `批量填报任务${taskId}`,
-        status: 'RUNNING',
+        status: 'PENDING', // 初始状态为PENDING，需要点击开始校验
         totalCount: 20,
-        successCount: 8,
-        failedCount: 1,
+        successCount: 0, // 初始为0
+        failedCount: 0,  // 初始为0
         currentStep: 'VALIDATE',
-        progress: 45,
+        progress: 0, // 初始进度为0
         createTime: new Date().toISOString(),
         orders: Array.from({ length: 20 }, (_, index) => ({
           id: index + 1,
@@ -357,12 +483,12 @@ export default {
           quantity: Math.floor(Math.random() * 1000) + 1,
           plannedPrice: (Math.random() * 1000 + 100).toFixed(2),
           productId: `P${Math.random().toString(36).substr(2, 8)}`,
-          validateStatus: ['PENDING', 'SUCCESS', 'FAILED'][Math.floor(Math.random() * 3)],
-          uploadStatus: ['PENDING', 'SUCCESS', 'FAILED'][Math.floor(Math.random() * 3)],
+          validateStatus: 'PENDING', // 所有数据都是待校验状态
+          uploadStatus: 'PENDING',   // 所有数据都是待填报状态
           settlementType: Math.random() > 0.5 ? 1 : 2,
           type: Math.random() > 0.5 ? 1 : 2,
-          validateFailReason: Math.random() > 0.7 ? '产品信息不匹配' : '',
-          uploadFailReason: Math.random() > 0.8 ? '网络连接超时' : '',
+          validateFailReason: '', // 初始无失败原因
+          uploadFailReason: '',   // 初始无失败原因
           productPrice: (Math.random() * 1000 + 50).toFixed(2),
           maxReferencePrice: (Math.random() * 1200 + 100).toFixed(2)
         }))
@@ -390,14 +516,39 @@ export default {
       }
     }
 
-    // 开始填报
-    const startUpload = () => {
+    // 开始校验
+    const startValidate = () => {
       if (task.value) {
+        // 重置校验状态
+        resetDataStatus()
+
         store.commit('UPDATE_TASK_PROGRESS', {
           taskId: task.value.id,
           progress: {
             status: 'RUNNING',
-            progress: 0
+            progress: 0,
+            successCount: 0,
+            failedCount: 0
+          }
+        })
+        ElMessage.success('开始数据校验')
+        connectWebSocket()
+      }
+    }
+
+    // 开始填报
+    const startUpload = () => {
+      if (task.value) {
+        // 重置填报状态
+        resetDataStatus()
+
+        store.commit('UPDATE_TASK_PROGRESS', {
+          taskId: task.value.id,
+          progress: {
+            status: 'RUNNING',
+            progress: 0,
+            successCount: 0,
+            failedCount: 0
           }
         })
         ElMessage.success('开始数据填报')
@@ -408,6 +559,9 @@ export default {
     // 返回校验
     const goBackToValidate = () => {
       if (task.value) {
+        // 切换步骤，重置当前步骤的数据状态
+        resetDataStatus()
+
         store.commit('UPDATE_TASK_PROGRESS', {
           taskId: task.value.id,
           progress: {
@@ -423,7 +577,7 @@ export default {
     const stopTask = async () => {
       try {
         await ElMessageBox.confirm(
-          '确定要停止当前任务吗？',
+          '确定要停止当前任务吗？停止后将保留当前进度，未开始的数据不会继续处理。',
           '确认停止',
           {
             confirmButtonText: '确定',
@@ -433,12 +587,23 @@ export default {
         )
 
         if (task.value) {
+          // 清除定时器，停止进度更新
+          if (progressInterval.value) {
+            clearInterval(progressInterval.value)
+            progressInterval.value = null
+          }
+
+          // 停止任务时，将正在处理中的数据状态结束处理
+          stopProcessingItems()
+
           store.commit('UPDATE_TASK_PROGRESS', {
             taskId: task.value.id,
             progress: {
               status: 'FAILED'
             }
           })
+
+          currentProcessingItem.value = '任务已停止'
           ElMessage.success('任务已停止')
         }
       } catch {
@@ -446,19 +611,84 @@ export default {
       }
     }
 
+    // 停止正在处理的数据项
+    const stopProcessingItems = () => {
+      if (!task.value?.orders) return
+
+      const currentStep = task.value.currentStep
+      const statusField = currentStep === 'VALIDATE' ? 'validateStatus' : 'uploadStatus'
+      const processingStatus = currentStep === 'VALIDATE' ? 'VALIDATING' : 'UPLOADING'
+
+      // 将所有正在处理中的数据完成处理（按成功率分配最终状态）
+      task.value.orders.forEach(order => {
+        if (order[statusField] === processingStatus) {
+          // 85%成功率，15%失败率
+          const isSuccess = Math.random() < 0.85
+          order[statusField] = isSuccess ? 'SUCCESS' : 'FAILED'
+
+          const reasonField = currentStep === 'VALIDATE' ? 'validateFailReason' : 'uploadFailReason'
+          if (!isSuccess) {
+            const failureReasons = currentStep === 'VALIDATE'
+              ? ['产品信息不匹配', '供应商信息错误', '价格异常', '数据格式错误']
+              : ['网络连接超时', '系统繁忙', '数据验证失败', '上传服务异常']
+
+            order[reasonField] = failureReasons[Math.floor(Math.random() * failureReasons.length)]
+          } else {
+            order[reasonField] = ''
+          }
+        }
+      })
+
+      // 重新计算统计数据
+      updateTaskStatistics()
+    }
+
+    // 更新任务统计数据
+    const updateTaskStatistics = () => {
+      if (!task.value?.orders) return
+
+      const currentStep = task.value.currentStep
+      const statusField = currentStep === 'VALIDATE' ? 'validateStatus' : 'uploadStatus'
+
+      let successCount = 0
+      let failedCount = 0
+
+      task.value.orders.forEach(order => {
+        if (order[statusField] === 'SUCCESS') {
+          successCount++
+        } else if (order[statusField] === 'FAILED') {
+          failedCount++
+        }
+      })
+
+      // 计算进度百分比
+      const processedCount = successCount + failedCount
+      const progress = Math.floor((processedCount / task.value.totalCount) * 100)
+
+      store.commit('UPDATE_TASK_PROGRESS', {
+        taskId: task.value.id,
+        progress: {
+          progress,
+          successCount,
+          failedCount
+        }
+      })
+    }
+
     // 继续任务
     const continueTask = async () => {
       if (task.value) {
-        // 直接设置为运行状态，而不是PENDING
+        // 继续任务时不重置数据状态，保持当前进度
+        // 只对未处理的数据（PENDING状态）继续处理
         store.commit('UPDATE_TASK_PROGRESS', {
           taskId: task.value.id,
           progress: {
-            status: 'RUNNING',  // 直接设为RUNNING状态
-            // 保持当前进度，不重置
+            status: 'RUNNING'
+            // 保持当前进度和统计数据，不重置
           }
         })
 
-        // 重新连接WebSocket
+        // 重新连接WebSocket继续处理剩余数据
         connectWebSocket()
 
         ElMessage.success('任务已继续')
@@ -499,6 +729,7 @@ export default {
     const getValidateStatusText = (status) => {
       const statusMap = {
         PENDING: '待校验',
+        VALIDATING: '校验中',
         SUCCESS: '成功',
         FAILED: '失败'
       }
@@ -508,6 +739,7 @@ export default {
     const getValidateStatusTagType = (status) => {
       const typeMap = {
         PENDING: 'info',
+        VALIDATING: 'warning',
         SUCCESS: 'success',
         FAILED: 'danger'
       }
@@ -517,6 +749,7 @@ export default {
     const getUploadStatusText = (status) => {
       const statusMap = {
         PENDING: '待填报',
+        UPLOADING: '填报中',
         SUCCESS: '成功',
         FAILED: '失败'
       }
@@ -526,6 +759,7 @@ export default {
     const getUploadStatusTagType = (status) => {
       const typeMap = {
         PENDING: 'info',
+        UPLOADING: 'warning',
         SUCCESS: 'success',
         FAILED: 'danger'
       }
@@ -583,6 +817,7 @@ export default {
       filteredTableData,
       goBack,
       goToUploadStep,
+      startValidate,
       startUpload,
       goBackToValidate,
       stopTask,
