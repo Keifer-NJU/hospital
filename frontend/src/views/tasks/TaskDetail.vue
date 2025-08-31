@@ -505,12 +505,21 @@ export default {
     // 数据校验完成，进入填报步骤
     const goToUploadStep = () => {
       if (task.value) {
+        // 切换步骤并重置进度、统计数据
         store.commit('UPDATE_TASK_PROGRESS', {
           taskId: task.value.id,
           progress: {
             currentStep: 'UPLOAD',
-            status: 'PENDING'
+            status: 'PENDING',
+            progress: 0,
+            successCount: 0,
+            failedCount: 0
           }
+        })
+        // 重置所有订单的填报状态
+        task.value.orders.forEach(order => {
+          order.uploadStatus = 'PENDING'
+          order.uploadFailReason = ''
         })
         ElMessage.success('已进入数据填报步骤')
       }
